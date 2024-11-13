@@ -1,4 +1,9 @@
 import java.util.HashMap;
+import netP5.*;
+import oscP5.*;
+
+OscP5 oscP5;
+NetAddress pdAddress;
 
 Movies[] movies; 
 Table table;
@@ -18,18 +23,21 @@ void setup() {
   frameRate(60);
   loadData();
   noStroke();
+   
+   oscP5 = new OscP5(this, 12000); // Puerto local en Processing
+   pdAddress = new NetAddress("192.168.100.177", 8000); // Dirección y puerto de Pure Data
 
-  genreColors.put("Action", color(255, 0, 0));         // Tomato Red
-  genreColors.put("Adventure", color(255, 140, 0));    // Dark Orange
-  genreColors.put("Comedy", color(255, 255, 0));       // Peach
-  genreColors.put("Drama", color(72, 61, 139));          // Dark Slate Blue
-  genreColors.put("Fantasy", color(186, 85, 211));       // Medium Orchid
-  genreColors.put("Horror", color(54, 54, 54));          // Dark Gray
-  genreColors.put("Sci-Fi", color(60, 179, 113));        // Medium Sea Green
-  genreColors.put("Thriller", color(105, 105, 105));     // Dim Gray
-  genreColors.put("Mystery", color(70, 130, 180));       // Steel Blue
-  genreColors.put("Romance", color(255, 182, 193));      // Light Pink
-  genreColors.put("Animation", color(135, 206, 235));    // Sky Blue
+  genreColors.put("Action", color(255, 0, 0));         // Rojo
+  genreColors.put("Adventure", color(255, 140, 0));    // Naranja
+  genreColors.put("Comedy", color(255, 255, 0));       // Amarillo
+  genreColors.put("Drama", color(72, 61, 139));          // Azul Oscuro
+  genreColors.put("Fantasy", color(186, 85, 211));       // Moradp
+  genreColors.put("Horror", color(54, 54, 54));          // Gris
+  genreColors.put("Sci-Fi", color(60, 179, 113));        // Verde
+  genreColors.put("Thriller", color(105, 105, 105));     // Negro
+  genreColors.put("Mystery", color(70, 130, 180));       // Azul Oscuro
+  genreColors.put("Romance", color(255, 182, 193));      // Rosa
+  genreColors.put("Animation", color(135, 206, 235));    // Azul Cielo
   bgColorStart = color(random(255), random(255), random(255));
   bgColorEnd = color(random(255), random(255), random(255));
 }
@@ -70,8 +78,23 @@ void mousePressed() {
   for (int i = 0; i < movies.length; i++) {
     if (movies[i].isMouseOver()) {
       movies[i].triggerEffect();
+      SendOSC1(movies[i]);
     }
   }
+}
+
+void SendOSC1(Movies movie) {
+  OscMessage sending1 = new OscMessage("");
+  sending1.add(int(movie.revenue));
+  sending1.add(int(movie.runtime));
+  oscP5.send(sending1, pdAddress);
+}
+
+void SendOSC2(String genre) {
+  OscMessage sending2 = new OscMessage("");
+  sending2.add(int(genre.length()));
+  sending2.add(int(1));
+  oscP5.send(sending2, pdAddress);
 }
 
 class Movies {
@@ -89,17 +112,17 @@ class Movies {
   Movies(String title, float rating, float revenue, float runtime, String genre) {
     this.title = title;
     this.rating = rating;
-    this.revenue = revenue;
+    this.revenue = Float.isNaN(revenue) ? 0 : revenue;  // Set to 0 if NaN
     this.runtime = runtime;
     this.genre = genre;
 
     diameter = map(rating, 0, 10, 20, 80);
-
+    bubbleColor = color(map(this.revenue, 0, 500, 0, 255));
+    
     boolean overlap = true;
     while (overlap) {
       x = random(diameter / 2, width - diameter / 2);
       y = random(diameter / 2, height - diameter / 2);
-
       overlap = false;
       for (PVector p : positions) {
         if (dist(x, y, p.x, p.y) < diameter) {
@@ -109,14 +132,11 @@ class Movies {
       }
     }
     positions.add(new PVector(x, y));
-
-    bubbleColor = color(255, map(revenue, 0, 500, 100, 255), map(revenue, 0, 500, 100, 255));
   }
 
   void display() {
     fill(bubbleColor, 150);
     ellipse(x, y, diameter, diameter);
-
     if (effectTriggered && countdown > 0) {
       float pulse = sin(frameCount * 0.1) * (runtime / 10);
       float auraSize = diameter + pulse + map(runtime, 0, 200, 20, 100);
@@ -124,7 +144,6 @@ class Movies {
       ellipse(x, y, auraSize, auraSize);
       countdown--;
     }
-
     if (dist(mouseX, mouseY, x, y) < diameter / 2) {
       fill(255);
       textAlign(CENTER);
@@ -141,6 +160,7 @@ class Movies {
     countdown = runtime / 10 * frameRate;
     if (genreColors.containsKey(genre)) {
       bgColorEnd = genreColors.get(genre);
+      SendOSC2(genre);
     }
   }
 }
