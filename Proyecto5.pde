@@ -8,6 +8,7 @@ NetAddress pdAddress;
 Movie[] movies; 
 Table table;
 int maxMovies = 100;
+int defaultGenreColor = color(245, 245, 245);
 ArrayList<PVector> positions = new ArrayList<PVector>(); 
 
 int bgColorStart;
@@ -24,28 +25,28 @@ void setup() {
   loadData();
   noStroke();
    
-   oscP5 = new OscP5(this, 12000); // Puerto local en Processing
-   pdAddress = new NetAddress("192.168.1.8", 8000); // Dirección y puerto de Pure Data
+   oscP5 = new OscP5(this, 12000); // Local Port
+   pdAddress = new NetAddress("192.168.100.177", 8000); // Address and PureData Port
 
   genreColors.put("Action", color(255, 0, 0));         // Rojo
   genreColors.put("Adventure", color(255, 140, 0));    // Naranja
   genreColors.put("Comedy", color(255, 255, 0));       // Amarillo
-  genreColors.put("Drama", color(72, 61, 139));          // Azul Oscuro
-  genreColors.put("Fantasy", color(186, 85, 211));       // Moradp
-  genreColors.put("Horror", color(54, 54, 54));          // Gris
-  genreColors.put("Sci-Fi", color(60, 179, 113));        // Verde
-  genreColors.put("Thriller", color(105, 105, 105));     // Negro
-  genreColors.put("Mystery", color(70, 130, 180));       // Azul Oscuro
-  genreColors.put("Romance", color(255, 182, 193));      // Rosa
-  genreColors.put("Animation", color(135, 206, 235));    // Azul Cielo
-  genreColors.put("Biography", color(135, 206, 0));
-  genreColors.put("Crime", color(135, 0, 235));
+  genreColors.put("Drama", color(72, 61, 139));        // Azul Oscuro
+  genreColors.put("Fantasy", color(186, 85, 211));     // Fucsia
+  genreColors.put("Horror", color(54, 54, 54));        // Gris
+  genreColors.put("Sci-Fi", color(60, 179, 113));      // Verde
+  genreColors.put("Thriller", color(128, 0, 128));     // Morado
+  genreColors.put("Mystery", color(0, 128, 128));      // Verde Azulado
+  genreColors.put("Romance", color(255, 192, 203));    // Rosa
+  genreColors.put("Animation", color(0, 255, 255));    // Cyan
+  genreColors.put("Biography", color(222, 184, 135));  // Beige
+  genreColors.put("Crime", color(220, 20, 60));       // Carmesí
   bgColorStart = color(random(255), random(255), random(255));
   bgColorEnd = color(random(255), random(255), random(255));
 }
 
 void loadData() {
-  table = loadTable("cleaned_data.csv", "header");
+  table = loadTable("data.csv", "header");
   int totalRows = min(table.getRowCount(), maxMovies);
   movies = new Movie[totalRows];
   for (int i = 0; i < totalRows; i++) {
@@ -86,11 +87,12 @@ void mousePressed() {
 }
 
 void SendOSC1(Movie movie) {
+  int genreColor = genreColors.getOrDefault(movie.genre, defaultGenreColor);
   OscMessage sending1 = new OscMessage("");
   sending1.add(int(movie.revenue));
   sending1.add(int(movie.runtime));
   sending1.add(int(movie.rating));
-  sending1.add(int(abs(genreColors.get(movie.genre))));
+  sending1.add(abs(genreColor));
   oscP5.send(sending1, pdAddress);
 }
 
@@ -157,6 +159,8 @@ class Movie {
     countdown = runtime / 10 * frameRate;
     if (genreColors.containsKey(genre)) {
       bgColorEnd = genreColors.get(genre);
+    } else {
+      bgColorEnd = defaultGenreColor;
     }
   }
 }
