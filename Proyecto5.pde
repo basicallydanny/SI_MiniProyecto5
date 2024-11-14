@@ -5,7 +5,7 @@ import oscP5.*;
 OscP5 oscP5;
 NetAddress pdAddress;
 
-Movies[] movies; 
+Movie[] movies; 
 Table table;
 int maxMovies = 100;
 ArrayList<PVector> positions = new ArrayList<PVector>(); 
@@ -25,7 +25,7 @@ void setup() {
   noStroke();
    
    oscP5 = new OscP5(this, 12000); // Puerto local en Processing
-   pdAddress = new NetAddress("192.168.100.177", 8000); // Dirección y puerto de Pure Data
+   pdAddress = new NetAddress("192.168.1.8", 8000); // Dirección y puerto de Pure Data
 
   genreColors.put("Action", color(255, 0, 0));         // Rojo
   genreColors.put("Adventure", color(255, 140, 0));    // Naranja
@@ -38,6 +38,8 @@ void setup() {
   genreColors.put("Mystery", color(70, 130, 180));       // Azul Oscuro
   genreColors.put("Romance", color(255, 182, 193));      // Rosa
   genreColors.put("Animation", color(135, 206, 235));    // Azul Cielo
+  genreColors.put("Biography", color(135, 206, 0));
+  genreColors.put("Crime", color(135, 0, 235));
   bgColorStart = color(random(255), random(255), random(255));
   bgColorEnd = color(random(255), random(255), random(255));
 }
@@ -45,7 +47,7 @@ void setup() {
 void loadData() {
   table = loadTable("cleaned_data.csv", "header");
   int totalRows = min(table.getRowCount(), maxMovies);
-  movies = new Movies[totalRows];
+  movies = new Movie[totalRows];
   for (int i = 0; i < totalRows; i++) {
     TableRow row = table.getRow(i);
     String title = row.getString("Title");
@@ -53,7 +55,7 @@ void loadData() {
     float revenue = row.getFloat("Revenue (Millions)");
     float runtime = row.getFloat("Runtime (Minutes)");
     String genre = row.getString("Genre");
-    movies[i] = new Movies(title, rating, revenue, runtime, genre);
+    movies[i] = new Movie(title, rating, revenue, runtime, genre);
   }
 }
 
@@ -83,21 +85,16 @@ void mousePressed() {
   }
 }
 
-void SendOSC1(Movies movie) {
+void SendOSC1(Movie movie) {
   OscMessage sending1 = new OscMessage("");
   sending1.add(int(movie.revenue));
   sending1.add(int(movie.runtime));
+  sending1.add(int(movie.rating));
+  sending1.add(int(abs(genreColors.get(movie.genre))));
   oscP5.send(sending1, pdAddress);
 }
 
-void SendOSC2(String genre) {
-  OscMessage sending2 = new OscMessage("");
-  sending2.add(int(genre.length()));
-  sending2.add(int(1));
-  oscP5.send(sending2, pdAddress);
-}
-
-class Movies {
+class Movie {
   String title;
   float rating;
   float revenue;
@@ -109,7 +106,7 @@ class Movies {
   boolean effectTriggered = false;
   float countdown = 0;
 
-  Movies(String title, float rating, float revenue, float runtime, String genre) {
+  Movie(String title, float rating, float revenue, float runtime, String genre) {
     this.title = title;
     this.rating = rating;
     this.revenue = Float.isNaN(revenue) ? 0 : revenue;  // Set to 0 if NaN
@@ -160,7 +157,6 @@ class Movies {
     countdown = runtime / 10 * frameRate;
     if (genreColors.containsKey(genre)) {
       bgColorEnd = genreColors.get(genre);
-      SendOSC2(genre);
     }
   }
 }
